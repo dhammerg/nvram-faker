@@ -1,49 +1,78 @@
 TRUNK ?=.
+
 include $(TRUNK)/arch.mk
 
+CC ?= cc
 
-AR?=ar
+CFLAGS += -ggdb
+CFLAGS += -DINI_MAX_LINE=2000
+CFLAGS += -DINI_USE_STACK=0
 
-CFLAGS+=-ggdb
-CFLAGS+= -DINI_MAX_LINE=2000
-CFLAGS+= -DINI_USE_STACK=0
-export CFLAGS
-EXE=nvram_faker_exe
-EXE_OBJ=nvram_faker_main.o
-OBJS=nvram-faker.o 
-INI_OBJ=ini.o
-INI_PATH=$(TRUNK)/contrib/inih
-INCLUDES=-I$(INI_PATH)
+INI_PATH = $(TRUNK)/contrib/inih
+INCLUDES = -I$(INI_PATH)
 
-LIB=libnvram-faker.so
+LIB = libnvram-faker.so
 
-all:$(LIB)
+COMMON_OBJS = ini.o
 
+.PHONY: all test exe clean
 
+all: $(LIB)
 
-exe: export CFLAGS+=-DNVRAM_EXE -DDEBUG
-exe: export CFLAGS+=-DINI_FILE_PATH=\"./nvram.ini\"
-exe: $(EXE)
+# --------------------------------------------------
+# Common INI object
+# --------------------------------------------------
 
+ini.o:
+	$(MAKE) -C $(INI_PATH) ini.o
+	cp $(INI_PATH)/ini.o .
 
+# --------------------------------------------------
+# Shared library
+# --------------------------------------------------
 
-$(INI_OBJ):
-	make -C $(INI_PATH) $@
-	cp $(INI_PATH)/$@ .
-
-%.o:%.c
+nvram-faker.o: nvram-faker.c
 	$(CC) -Wall $(INCLUDES) $(CFLAGS) -fPIC -c -o $@ $<
 
-$(LIB): $(OBJS) $(INI_OBJ)
+$(LIB): nvram-faker.o ini.o
 	$(CC) -shared -o $@ $^ -Wl,-nostdlib
 
-nvram_faker_exe:$(EXE_OBJ) $(OBJS) $(INI_OBJ)
-	$(CC) -Wall -o $@ $^ 
+# --------------------------------------------------
+# Standalone test
+# --------------------------------------------------
+
+test.o: test.c
+	$(CC) -Wall $(INCLUDES) $(CFLAGS) \
+		-DNVRAM_EXE -DDEBUG \
+		-DINI_FILE_PATH=\"./nvram.ini\" \
+		-c -o $@ $<
+
+nvram-faker-test.o: nvram-faker.c
+	$(CC) -Wall $(INCLUDES) $(CFLAGS) \
+		-DNVRAM_EXE -DDEBUG \
+		-DINI_FILE_PATH=\"./nvram.ini\" \
+		-fPIC -c -o $@ $<
+
+test: test.o nvram-faker-test.o ini.o
+	$(CC) -Wall -o $@ $^
+
+# --------------------------------------------------
+# Standalone nvram faker executable
+# --------------------------------------------------
+
+nvram_faker_main.o: nvram_faker_main.c
+	$(CC) -Wall $(INCLUDES) $(CFLAGS) \
+		-DNVRAM_EXE -DDEBUG \
+		-DINI_FILE_PATH=\"./nvram.ini\" \
+		-c -o $@ $<
+
+exe: nvram_faker_main.o nvram-faker.o ini.o
+	$(CC) -Wall -o nvram_faker_exe $^
+
+# --------------------------------------------------
+# Clean
+# --------------------------------------------------
 
 clean:
-	-rm *.o
-	-rm *.so
-	-rm $(EXE)
-	make -C $(INI_PATH) $@
-
-
+	rm -f *.o *.so nvram_faker_exe test
+	-$(MAKE) -C $(INI_PATH) clean
