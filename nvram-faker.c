@@ -258,3 +258,139 @@ int nvram_set(const char *key, const char *value)
 
     return 0;
 }
+
+int acosNvramConfig_set(const char *key, const char *value)
+{
+    return nvram_set(key, value);
+}
+
+char *acosNvramConfig_get(const char *key)
+{
+    return nvram_get(key);
+}
+
+int acosNvramConfig_setPAParam(int arg1){
+        
+        if (arg1 == 0)
+            acosNvramConfig_set("maxp2ga0", "0x5C");
+            acosNvramConfig_set("maxp2ga1", "0x5C");
+            acosNvramConfig_set("cck2gpo", "0x3333");
+            acosNvramConfig_set("ofdm2gpo", "0x75533333");
+            acosNvramConfig_set("mcs2gpo0", "0x5553");
+            acosNvramConfig_set("mcs2gpo1", "0xb755");
+            acosNvramConfig_set("mcs2gpo2", "0x7553");
+            acosNvramConfig_set("mcs2gpo3", "0xffd9");
+            acosNvramConfig_set("mcs2gpo4", "0x9666");
+            acosNvramConfig_set("mcs2gpo5", "0xffdb");
+            acosNvramConfig_set("mcs2gpo6", "0x9766");
+            acosNvramConfig_set("mcs2gpo7", "0xffdb");
+            return acosNvramConfig_set("regrev", "14");
+        
+        if (arg1 != 1)
+            return -1;
+        
+        acosNvramConfig_set("maxp2ga0", "0x42");
+        acosNvramConfig_set("maxp2ga1", "0x42");
+        acosNvramConfig_set("cck2gpo", "0x2222");
+        acosNvramConfig_set("ofdm2gpo", "0x88888888");
+        acosNvramConfig_set("mcs2gpo0", "0x8888");
+        acosNvramConfig_set("mcs2gpo1", "0x8888");
+        acosNvramConfig_set("mcs2gpo2", "0x8888");
+        acosNvramConfig_set("mcs2gpo3", "0x8888");
+        acosNvramConfig_set("mcs2gpo4", "0x8888");
+        acosNvramConfig_set("mcs2gpo5", "0x8888");
+        acosNvramConfig_set("mcs2gpo6", "0x8888");
+        acosNvramConfig_set("mcs2gpo7", "0x8888");
+        acosNvramConfig_set("ccode", "0");
+        return acosNvramConfig_set("regrev", "0");
+}
+
+int acosNvramConfig_match(const char *key, const char *value)
+{
+    char *v = acosNvramConfig_get(key);
+    int ret = 0;
+
+    if (v == NULL)
+    {
+        LOG_PRINTF("acosNvramConfig_match: key %s not found\n", key);
+        return 0;
+    }
+
+    ret = strcmp(v, value) == 0;
+
+    free(v);
+
+    return ret;
+}
+
+int nvram_commit(void)
+{
+    LOG_PRINTF("nvram_commit: no-op\n");
+    return 0;
+}
+
+void acosNvramConfig_read(const char *key, char *value, size_t len)
+{
+    char *v = acosNvramConfig_get(key);
+
+    if (v == NULL)
+    {
+        LOG_PRINTF("acosNvramConfig_read: key %s not found\n", key);
+        return;
+    }
+
+    strncpy(value, v, len - 1);
+    value[len - 1] = '\0';
+
+    free(v);
+}
+
+
+int acosNvramConfig_invmatch(const char *value, const char *str2)
+{
+    return strcmp(value, str2) != 0;
+}
+
+
+void acosNvramConfig_unset(){
+    printf("acosNvramConfig_unset: no-op\n");
+    return;
+}
+
+void acosNvramConfig_save()
+{
+    LOG_PRINTF("acosNvramConfig_save: no-op\n");
+    return;
+}
+
+int acosNvramConfig_readAsInt(const char *key)
+{
+    char *v = acosNvramConfig_get(key);
+    int ret = 0;
+
+    if (v == NULL)
+    {
+        LOG_PRINTF("acosNvramConfig_readAsInt: key %s not found\n", key);
+        return 0;
+    }
+
+    ret = atoi(v);
+
+    free(v);
+
+    return ret;
+}
+
+int acosNvramConfig_exist(const char *key)
+{
+    char *v = acosNvramConfig_get(key);
+    int ret = 0;
+
+    if (v != NULL)
+    {
+        ret = 1;
+        free(v);
+    }
+
+    return ret;
+}
