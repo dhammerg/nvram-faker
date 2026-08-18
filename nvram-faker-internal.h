@@ -21,12 +21,7 @@ void initialize_ini(void);
 void end(void);
 #endif
 
-#ifdef DEBUG
-#define DEBUG_PRINTF(format,...) fprintf(stderr,format,## __VA_ARGS__)
-#else
-#define DEBUG_PRINTF(format,...)
-#endif
-
-#define LOG_PRINTF(format,...) fprintf(stderr,format, ## __VA_ARGS__)
+/* Provide lightweight compatibility wrappers for environments without full libc */
+#include "compat.h"
 
 #endif /* __nvram_faker_internal_h */

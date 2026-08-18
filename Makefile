@@ -15,6 +15,9 @@ LIB = libnvram-faker.so
 
 COMMON_OBJS = ini.o
 
+COMPAT_OBJ = compat.o
+NVRAM_DATA_OBJ = nvram_data.o
+
 .PHONY: all test exe clean
 
 all: $(LIB)
@@ -34,7 +37,13 @@ ini.o:
 nvram-faker.o: nvram-faker.c
 	$(CC) -Wall $(INCLUDES) $(CFLAGS) -fPIC -c -o $@ $<
 
-$(LIB): nvram-faker.o ini.o
+compat.o: compat.c
+	$(CC) -Wall $(INCLUDES) $(CFLAGS) -fPIC -c -o $@ $<
+
+nvram_data.o: nvram_data.c
+	$(CC) -Wall $(INCLUDES) $(CFLAGS) -fPIC -c -o $@ $<
+
+$(LIB): nvram-faker.o ini.o $(COMPAT_OBJ) $(NVRAM_DATA_OBJ)
 	$(CC) -shared -o $@ $^ -Wl,-nostdlib
 
 # --------------------------------------------------

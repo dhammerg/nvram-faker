@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "nvram-faker.h"
-//include before ini.h to override ini.h defaults
 #include "nvram-faker-internal.h"
 #include "ini.h"
+#include "nvram_data.h"
 
 #define RED_ON "\033[22;31m"
 #define RED_OFF "\033[22;00m"
@@ -69,33 +69,41 @@ static int ini_handler(void *user, const char *section, const char *name, const 
 
 void initialize_ini(void)
 {
-    int ret;
-    DEBUG_PRINTF("Initializing.\n");
+    int i;
+    DEBUG_PRINTF("Initializing from static data.\n");
     if (NULL == key_value_pairs)
     {
-        key_value_pairs=malloc(key_value_pair_len * sizeof(char **));
+        key_value_pairs = malloc(key_value_pair_len * sizeof(char *));
     }
-    if(NULL == key_value_pairs)
+    if (NULL == key_value_pairs)
     {
         LOG_PRINTF("Failed to allocate memory for key value array. Terminating.\n");
-        exit(1);
+        nv_exit(1);
     }
-    
-    ret = ini_parse(INI_FILE_PATH,ini_handler,(void *)&key_value_pairs);
-    if (0 != ret)
+
+    /* populate from static nvram_init_pairs */
+    for (i = 0; i < nvram_init_pairs_count; i += 2)
     {
-        LOG_PRINTF("ret from ini_parse was: %d\n",ret);
-        LOG_PRINTF("INI parse failed. Terminating\n");
-        free(key_value_pairs);
-        key_value_pairs=NULL;
-        exit(1);
-    }else
-    {
-        DEBUG_PRINTF("ret from ini_parse was: %d\n",ret);
+        if (kv_count + 2 > key_value_pair_len)
+        {
+            int old_kv_len = key_value_pair_len;
+            key_value_pair_len *= 2;
+            char **new_kv = realloc(key_value_pairs, key_value_pair_len * sizeof(*new_kv));
+            if (new_kv == NULL)
+            {
+                LOG_PRINTF("Failed to reallocate key value array.\n");
+                key_value_pair_len = old_kv_len;
+                break;
+            }
+            key_value_pairs = new_kv;
+        }
+
+        key_value_pairs[kv_count++] = strdup(nvram_init_pairs[i]);
+        key_value_pairs[kv_count++] = strdup(nvram_init_pairs[i+1]);
     }
-    
+
+    DEBUG_PRINTF("Initialized %d key/value entries.\n", kv_count / 2);
     return;
-    
 }
 
 void end(void)
@@ -259,14 +267,11 @@ int nvram_set(const char *key, const char *value)
     return 0;
 }
 
-int acosNvramConfig_set(const char *key, const char *value)
+EXPORT int acosNvramConfig_set(const char * key, const char * value)
 {
-    return nvram_set(key, value);
-}
-
-char *acosNvramConfig_get(const char *key)
-{
-    return nvram_get(key);
+  if(key == NULL || value == NULL)
+    return 0;
+  return nvram_set(key, value);
 }
 
 int acosNvramConfig_setPAParam(int arg1){
@@ -305,28 +310,44 @@ int acosNvramConfig_setPAParam(int arg1){
         return acosNvramConfig_set("regrev", "0");
 }
 
-int acosNvramConfig_match(const char *key, const char *value)
-{
-    char *v = acosNvramConfig_get(key);
-    int ret = 0;
-
-    if (v == NULL)
-    {
-        LOG_PRINTF("acosNvramConfig_match: key %s not found\n", key);
-        return 0;
-    }
-
-    ret = strcmp(v, value) == 0;
-
-    free(v);
-
-    return ret;
-}
 
 int nvram_commit(void)
 {
     LOG_PRINTF("nvram_commit: no-op\n");
     return 0;
+}
+
+EXPORT char * acosNvramConfig_get(const char *key)
+{
+  char *ret;
+
+  if(!key)
+    return NULL;
+
+  ret = nvram_get(key);
+  if (!ret)
+    ret = "";
+  return ret;
+}
+
+EXPORT int acosNvramConfig_invmatch(const char * key, const char *value)
+{
+  const char *result;
+
+  result = nvram_get(key);
+  if (!result)
+    return 0;
+  return nvram_faker_strcmp(result, value) != 0;
+}
+
+EXPORT int acosNvramConfig_match(const char * key, const char *value)
+{
+  const char *result;
+
+  result = nvram_get(key);
+  if (!result)
+    return 0;
+  return nvram_faker_strcmp(result, value) == 0;
 }
 
 void acosNvramConfig_read(const char *key, char *value, size_t len)
@@ -343,12 +364,6 @@ void acosNvramConfig_read(const char *key, char *value, size_t len)
     value[len - 1] = '\0';
 
     free(v);
-}
-
-
-int acosNvramConfig_invmatch(const char *value, const char *str2)
-{
-    return strcmp(value, str2) != 0;
 }
 
 
@@ -393,4 +408,12 @@ int acosNvramConfig_exist(const char *key)
     }
 
     return ret;
+}
+
+
+//Wait for 5 seconds on startup so we can attach to the upnpd with gdb
+//Requires libc. Can be replaced with a large loop if libc cannot be used
+static void con() __attribute__((constructor));
+void con() {
+	sleep(5);
 }

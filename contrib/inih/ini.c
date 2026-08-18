@@ -13,6 +13,8 @@ http://code.google.com/p/inih/
 
 #include "ini.h"
 
+#include "../../compat.h"
+
 #if !INI_USE_STACK
 #include <stdlib.h>
 #endif
