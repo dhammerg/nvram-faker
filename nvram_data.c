@@ -1,7 +1,7 @@
 #include "nvram_data.h"
 
 /* Base pairs: key, value, key, value, ... */
-const char *nvram_init_pairs[] = {
+const char *nvram_init_pairs[] __attribute__((visibility("default"))) = {
 "os_name","linux",
 "os_version","1",
 "upnp_port","9999",
@@ -2189,4 +2189,4 @@ const char *nvram_init_pairs[] = {
 "apmode_dns1", "0.0.0.0",
 };
 
-const int nvram_init_pairs_count = sizeof(nvram_init_pairs) / sizeof(nvram_init_pairs[0]);
+const int nvram_init_pairs_count __attribute__((visibility("default"))) = sizeof(nvram_init_pairs) / sizeof(nvram_init_pairs[0]);

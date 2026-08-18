@@ -67,7 +67,7 @@ static int ini_handler(void *user, const char *section, const char *name, const 
     return 1;
 }
 
-void initialize_ini(void)
+__attribute__((visibility("default"))) void initialize_ini(void)
 {
     int i;
     DEBUG_PRINTF("Initializing from static data.\n");
@@ -106,7 +106,7 @@ void initialize_ini(void)
     return;
 }
 
-void end(void)
+__attribute__((visibility("default"))) void end(void)
 {
     int i;
     for (i=0;i<kv_count;i++)

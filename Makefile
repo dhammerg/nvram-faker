@@ -44,7 +44,8 @@ nvram_data.o: nvram_data.c
 	$(CC) -Wall $(INCLUDES) $(CFLAGS) -fPIC -c -o $@ $<
 
 $(LIB): nvram-faker.o ini.o $(COMPAT_OBJ) $(NVRAM_DATA_OBJ)
-	$(CC) -shared -o $@ $^ -Wl,-nostdlib
+	# Set SONAME to libnvram.so so binaries needing libnvram.so resolve correctly
+	$(CC) -shared -Wl,-soname,libnvram.so -o $@ $^ -Wl,-nostdlib
 
 # --------------------------------------------------
 # Standalone test
