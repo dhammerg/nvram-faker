@@ -63,7 +63,7 @@ nvram-faker-test.o: nvram-faker.c
 		-DINI_FILE_PATH=\"./nvram.ini\" \
 		-fPIC -c -o $@ $<
 
-test: test.o nvram-faker-test.o ini.o
+test: test.o nvram-faker-test.o ini.o compat.o nvram_data.o
 	$(CC) -Wall -o $@ $^
 
 # --------------------------------------------------
