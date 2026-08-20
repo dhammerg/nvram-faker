@@ -1,3 +1,7 @@
+```
+make   CC=/root/LAB/buildroot-2012.11.x/output/host/usr/bin/arm-buildroot-linux-uclibcgnueabi-gcc   LD=/root/LAB/buildroot-2012.11.x/output/host/usr/bin/arm-buildroot-linux-uclibcgnueabi-ld   CFLAGS="--sysroot=/root/LAB/buildroot-2012.11.x/output/host/usr/arm-buildroot-linux-uclibcgnueabi/sysroot -Wall -I./contrib/inih -ggdb -DINI_MAX_LINE=2000 -DINI_USE_STACK=0 -fPIC -std=gnu99"   all
+```
+
 nvram-faker
 ===========
 
