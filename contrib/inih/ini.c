@@ -8,7 +8,6 @@ http://code.google.com/p/inih/
 */
 
 #include <stdio.h>
-#include <ctype.h>
 #include <string.h>
 
 #include "ini.h"
@@ -22,20 +21,43 @@ http://code.google.com/p/inih/
 #define MAX_SECTION 50
 #define MAX_NAME 50
 
+/*
+ * Replacement for isspace().
+ *
+ * We intentionally do not use the libc isspace() implementation here.
+ * Some old uClibc headers expand isspace() to an internal __ctype_b
+ * reference, while the target R7000 libc exports __ctype_b_loc instead.
+ *
+ * These are the standard whitespace characters recognized by isspace()
+ * in the C locale.
+ */
+static int nv_isspace(unsigned char c)
+{
+    return c == ' '  ||
+           c == '\t' ||
+           c == '\n' ||
+           c == '\r' ||
+           c == '\f' ||
+           c == '\v';
+}
+
 /* Strip whitespace chars off end of given string, in place. Return s. */
 static char* rstrip(char* s)
 {
     char* p = s + strlen(s);
-    while (p > s && isspace((unsigned char)(*--p)))
+
+    while (p > s && nv_isspace((unsigned char)(*--p)))
         *p = '\0';
+
     return s;
 }
 
-/* Return pointer to first non-whitespace char in given string. */
+/* Return pointer to first non-whitespace char. */
 static char* lskip(const char* s)
 {
-    while (*s && isspace((unsigned char)(*s)))
+    while (*s && nv_isspace((unsigned char)(*s)))
         s++;
+
     return (char*)s;
 }
 
@@ -45,10 +67,12 @@ static char* lskip(const char* s)
 static char* find_char_or_comment(const char* s, char c)
 {
     int was_whitespace = 0;
+
     while (*s && *s != c && !(was_whitespace && *s == ';')) {
-        was_whitespace = isspace((unsigned char)(*s));
+        was_whitespace = nv_isspace((unsigned char)(*s));
         s++;
     }
+
     return (char*)s;
 }
 
@@ -57,6 +81,7 @@ static char* strncpy0(char* dest, const char* src, size_t size)
 {
     strncpy(dest, src, size);
     dest[size - 1] = '\0';
+
     return dest;
 }
 
@@ -72,6 +97,7 @@ int ini_parse_file(FILE* file,
 #else
     char* line;
 #endif
+
     char section[MAX_SECTION] = "";
     char prev_name[MAX_NAME] = "";
 
@@ -79,11 +105,13 @@ int ini_parse_file(FILE* file,
     char* end;
     char* name;
     char* value;
+
     int lineno = 0;
     int error = 0;
 
 #if !INI_USE_STACK
     line = (char*)malloc(INI_MAX_LINE);
+
     if (!line) {
         return -2;
     }
@@ -94,32 +122,43 @@ int ini_parse_file(FILE* file,
         lineno++;
 
         start = line;
+
 #if INI_ALLOW_BOM
-        if (lineno == 1 && (unsigned char)start[0] == 0xEF &&
-                           (unsigned char)start[1] == 0xBB &&
-                           (unsigned char)start[2] == 0xBF) {
+        if (lineno == 1 &&
+            (unsigned char)start[0] == 0xEF &&
+            (unsigned char)start[1] == 0xBB &&
+            (unsigned char)start[2] == 0xBF) {
             start += 3;
         }
 #endif
+
         start = lskip(rstrip(start));
 
         if (*start == ';' || *start == '#') {
             /* Per Python ConfigParser, allow '#' comments at start of line */
         }
+
 #if INI_ALLOW_MULTILINE
         else if (*prev_name && *start && start > line) {
             /* Non-black line with leading whitespace, treat as continuation
                of previous name's value (as per Python ConfigParser). */
+
             if (!handler(user, section, prev_name, start) && !error)
                 error = lineno;
         }
 #endif
+
         else if (*start == '[') {
             /* A "[section]" line */
             end = find_char_or_comment(start + 1, ']');
+
             if (*end == ']') {
                 *end = '\0';
-                strncpy0(section, start + 1, sizeof(section));
+
+                strncpy0(section,
+                         start + 1,
+                         sizeof(section));
+
                 *prev_name = '\0';
             }
             else if (!error) {
@@ -127,23 +166,34 @@ int ini_parse_file(FILE* file,
                 error = lineno;
             }
         }
+
         else if (*start && *start != ';') {
             /* Not a comment, must be a name[=:]value pair */
+
             end = find_char_or_comment(start, '=');
+
             if (*end != '=') {
                 end = find_char_or_comment(start, ':');
             }
+
             if (*end == '=' || *end == ':') {
                 *end = '\0';
+
                 name = rstrip(start);
                 value = lskip(end + 1);
+
                 end = find_char_or_comment(value, '\0');
+
                 if (*end == ';')
                     *end = '\0';
+
                 rstrip(value);
 
                 /* Valid name[=:]value pair found, call handler */
-                strncpy0(prev_name, name, sizeof(prev_name));
+                strncpy0(prev_name,
+                         name,
+                         sizeof(prev_name));
+
                 if (!handler(user, section, name, value) && !error)
                     error = lineno;
             }
@@ -163,16 +213,23 @@ int ini_parse_file(FILE* file,
 
 /* See documentation in header file. */
 int ini_parse(const char* filename,
-              int (*handler)(void*, const char*, const char*, const char*),
+              int (*handler)(void*,
+                             const char*,
+                             const char*,
+                             const char*),
               void* user)
 {
     FILE* file;
     int error;
 
     file = fopen(filename, "r");
+
     if (!file)
         return -1;
+
     error = ini_parse_file(file, handler, user);
+
     fclose(file);
+
     return error;
 }
